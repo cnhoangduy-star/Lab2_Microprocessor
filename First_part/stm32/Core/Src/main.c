@@ -32,9 +32,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-/* Chọn bài demo: 4 hoặc 5 */
+/* Chọn bài demo: 1, 2, 4 hoặc 5 */
 #define EXERCISE        4
 #define TIMER_CYCLE_MS  10    // TIM2: 8MHz/(7999+1)/(9+1) = 100Hz -> ngắt mỗi 10ms
+#define SWITCH_PERIOD_MS 500  // Ex1, Ex2: mỗi LED 7 đoạn sáng 500ms
 #define SCAN_PERIOD_MS  250   // mỗi LED sáng 250ms -> quét đủ 4 LED mất 1s -> tần số quét 1Hz
 #define DOT_PERIOD_MS   500   // DOT đảo trạng thái mỗi 500ms -> nháy 1 lần mỗi giây
 /* USER CODE END PD */
@@ -317,10 +318,68 @@ static void MX_GPIO_Init(void)
 int scan_counter = SCAN_PERIOD_MS / TIMER_CYCLE_MS;
 int dot_counter  = DOT_PERIOD_MS / TIMER_CYCLE_MS;
 
+#if EXERCISE == 1 || EXERCISE == 2
+int switch_counter = SWITCH_PERIOD_MS / TIMER_CYCLE_MS;
+int led_status = 0;   // con 7-seg đang được bật
+#endif
+
 /* Được gọi mỗi 10ms */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
   if (htim->Instance != TIM2) return;
 
+#if EXERCISE == 1
+  /* Ex1: 2 LED 7 đoạn, hiện "1" và "2", đổi LED mỗi 500ms */
+  switch_counter--;
+  if (switch_counter <= 0) {
+    switch_counter = SWITCH_PERIOD_MS / TIMER_CYCLE_MS;
+    disableAll7SEG();
+    if (led_status == 0) {
+      display7SEG(1);
+      HAL_GPIO_WritePin(EN0_GPIO_Port, EN0_Pin, GPIO_PIN_RESET);
+      led_status = 1;
+    } else {
+      display7SEG(2);
+      HAL_GPIO_WritePin(EN1_GPIO_Port, EN1_Pin, GPIO_PIN_RESET);
+      led_status = 0;
+    }
+  }
+#elif EXERCISE == 2
+  /* Ex2: 4 LED 7 đoạn hiện "12 30", đổi LED mỗi 500ms, DOT nháy mỗi giây */
+  switch_counter--;
+  if (switch_counter <= 0) {
+    switch_counter = SWITCH_PERIOD_MS / TIMER_CYCLE_MS;
+    disableAll7SEG();
+    switch (led_status) {
+      case 0:
+        display7SEG(1);
+        HAL_GPIO_WritePin(EN0_GPIO_Port, EN0_Pin, GPIO_PIN_RESET);
+        break;
+      case 1:
+        display7SEG(2);
+        HAL_GPIO_WritePin(EN1_GPIO_Port, EN1_Pin, GPIO_PIN_RESET);
+        break;
+      case 2:
+        display7SEG(3);
+        HAL_GPIO_WritePin(EN2_GPIO_Port, EN2_Pin, GPIO_PIN_RESET);
+        break;
+      case 3:
+        display7SEG(0);
+        HAL_GPIO_WritePin(EN3_GPIO_Port, EN3_Pin, GPIO_PIN_RESET);
+        break;
+      default:
+        break;
+    }
+    led_status++;
+    if (led_status >= 4) led_status = 0;
+  }
+
+  dot_counter--;
+  if (dot_counter <= 0) {
+    dot_counter = DOT_PERIOD_MS / TIMER_CYCLE_MS;
+    HAL_GPIO_TogglePin(DOT_GPIO_Port, DOT_Pin);
+  }
+#else
+  /* Ex3, Ex4, Ex5: quét 4 LED bằng update7SEG */
   scan_counter--;
   if (scan_counter <= 0) {
     scan_counter = SCAN_PERIOD_MS / TIMER_CYCLE_MS;
@@ -333,6 +392,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     dot_counter = DOT_PERIOD_MS / TIMER_CYCLE_MS;
     HAL_GPIO_TogglePin(DOT_GPIO_Port, DOT_Pin);
   }
+#endif
 }
 /* USER CODE END 4 */
 

@@ -1,0 +1,18 @@
+# ===== STM32CubeIDE =====
+# Bỏ toàn bộ file build, chỉ giữ .hex để Proteus chạy được ngay sau khi clone
+**/Debug/*
+!**/Debug/*.hex
+**/Release/
+.metadata/
+*.launch
+**/.settings/language.settings.xml
+
+# ===== Proteus =====
+**/Project Backups/
+*.pdsbak
+*.workspace
+
+# ===== Hệ điều hành / editor =====
+.vscode/
+Thumbs.db
+desktop.ini
